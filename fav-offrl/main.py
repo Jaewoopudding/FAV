@@ -1,0 +1,272 @@
+import os
+import json
+import random
+import time
+from datetime import datetime
+
+import jax
+import numpy as np
+import tqdm
+import wandb
+from absl import app, flags
+from ml_collections import config_flags
+
+from agents import agents
+from envs.env_utils import make_env_and_datasets
+from utils.datasets import Dataset, ReplayBuffer
+from utils.evaluation import evaluate, flatten
+from utils.flax_utils import restore_agent, save_agent
+from utils.log_utils import CsvLogger, get_flag_dict, get_wandb_video, setup_wandb
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string('run_group', 'Debug', 'Run group.')
+flags.DEFINE_integer('seed', 0, 'Random seed.')
+flags.DEFINE_string('env_name', 'cube-double-play-singletask-v0', 'Environment (dataset) name.')
+flags.DEFINE_string('save_dir', 'exp/', 'Save directory.')
+flags.DEFINE_string('restore_path', None, 'Restore path.')
+flags.DEFINE_integer('restore_epoch', None, 'Restore epoch.')
+
+flags.DEFINE_integer('offline_steps', 1000000, 'Number of offline steps.')
+flags.DEFINE_integer('online_steps', 0, 'Number of online steps.')
+flags.DEFINE_integer('buffer_size', 2000000, 'Replay buffer size.')
+flags.DEFINE_integer('log_interval', 5000, 'Logging interval.')
+flags.DEFINE_integer('eval_interval', 100000, 'Evaluation interval.')
+flags.DEFINE_integer('save_interval', 1000000, 'Saving interval.')
+
+flags.DEFINE_integer('eval_episodes', 50, 'Number of evaluation episodes.')
+flags.DEFINE_integer('video_episodes', 0, 'Number of video episodes for each task.')
+flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for videos.')
+
+flags.DEFINE_float('p_aug', None, 'Probability of applying image augmentation.')
+flags.DEFINE_integer('frame_stack', None, 'Number of frames to stack.')
+flags.DEFINE_integer('balanced_sampling', 0, 'Whether to use balanced sampling for online fine-tuning.')
+
+flags.DEFINE_string(
+    'wandb_project_suffix',
+    '',
+    'Optional suffix appended to W&B project name (default: "fav"). Example: --wandb_project_suffix=-final',
+)
+
+config_flags.DEFINE_config_file('agent', 'agents/fav.py', lock_config=False)
+
+
+def main(_):
+    # Load agent config first (used for run name).
+    config = FLAGS.agent
+
+    # Set up logger.
+    # Run name format: algorithm_name_env_name_seed_YYYYMMDD_HHMMSS
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    exp_name = f'{config["agent_name"]}_{FLAGS.env_name}_{FLAGS.seed}_{timestamp}'
+    wandb_project = f'fav{FLAGS.wandb_project_suffix}'
+    setup_wandb(project=wandb_project, group=FLAGS.run_group, name=exp_name)
+
+    FLAGS.save_dir = os.path.join(FLAGS.save_dir, wandb.run.project, FLAGS.run_group, exp_name)
+    os.makedirs(FLAGS.save_dir, exist_ok=True)
+    flag_dict = get_flag_dict()
+    with open(os.path.join(FLAGS.save_dir, 'flags.json'), 'w') as f:
+        json.dump(flag_dict, f)
+
+    # Make environment and datasets.
+    env, eval_env, train_dataset, val_dataset = make_env_and_datasets(FLAGS.env_name, frame_stack=FLAGS.frame_stack)
+    if FLAGS.video_episodes > 0:
+        assert 'singletask' in FLAGS.env_name, 'Rendering is currently only supported for OGBench environments.'
+    if FLAGS.online_steps > 0:
+        assert 'visual' not in FLAGS.env_name, 'Online fine-tuning is currently not supported for visual environments.'
+
+    # Initialize agent.
+    random.seed(FLAGS.seed)
+    np.random.seed(FLAGS.seed)
+
+    # Set up datasets.
+    train_dataset = Dataset.create(**train_dataset)
+    if FLAGS.balanced_sampling:
+        # Create a separate replay buffer so that we can sample from both the training dataset and the replay buffer.
+        example_transition = {k: v[0] for k, v in train_dataset.items()}
+        replay_buffer = ReplayBuffer.create(example_transition, size=FLAGS.buffer_size)
+    else:
+        # Use the training dataset as the replay buffer.
+        train_dataset = ReplayBuffer.create_from_initial_dataset(
+            dict(train_dataset), size=max(FLAGS.buffer_size, train_dataset.size + 1)
+        )
+        replay_buffer = train_dataset
+    # Set p_aug and frame_stack.
+    for dataset in [train_dataset, val_dataset, replay_buffer]:
+        if dataset is not None:
+            dataset.p_aug = FLAGS.p_aug
+            dataset.frame_stack = FLAGS.frame_stack
+            if config['agent_name'] == 'rebrac':
+                dataset.return_next_actions = True
+
+    # Create agent.
+    example_batch = train_dataset.sample(1)
+
+    agent_class = agents[config['agent_name']]
+    agent = agent_class.create(
+        FLAGS.seed,
+        example_batch['observations'],
+        example_batch['actions'],
+        config,
+    )
+
+    # Restore agent.
+    if FLAGS.restore_path is not None:
+        agent = restore_agent(agent, FLAGS.restore_path, FLAGS.restore_epoch)
+
+    # Train agent.
+    train_logger = CsvLogger(os.path.join(FLAGS.save_dir, 'train.csv'))
+    eval_logger = CsvLogger(os.path.join(FLAGS.save_dir, 'eval.csv'))
+    eval_success_history = []
+    first_time = time.time()
+    last_time = time.time()
+
+    step = 0
+    done = True
+    expl_metrics = dict()
+    online_rng = jax.random.PRNGKey(FLAGS.seed)
+    for i in tqdm.tqdm(range(1, FLAGS.offline_steps + FLAGS.online_steps + 1), smoothing=0.1, dynamic_ncols=True):
+        if i <= FLAGS.offline_steps:
+            # Offline RL.
+            batch = train_dataset.sample(config['batch_size'])
+
+            if config['agent_name'] == 'rebrac':
+                agent, update_info = agent.update(batch, full_update=(i % config['actor_freq'] == 0))
+            else:
+                agent, update_info = agent.update(batch)
+        else:
+            # Online fine-tuning.
+            online_rng, key = jax.random.split(online_rng)
+
+            if done:
+                step = 0
+                ob, _ = env.reset()
+
+            action = agent.sample_actions(observations=ob, temperature=1, seed=key)
+            action = np.array(action)
+
+            next_ob, reward, terminated, truncated, info = env.step(action.copy())
+            done = terminated or truncated
+
+            if 'antmaze' in FLAGS.env_name and (
+                'diverse' in FLAGS.env_name or 'play' in FLAGS.env_name or 'umaze' in FLAGS.env_name
+            ):
+                # Adjust reward for D4RL antmaze.
+                reward = reward - 1.0
+
+            replay_buffer.add_transition(
+                dict(
+                    observations=ob,
+                    actions=action,
+                    rewards=reward,
+                    terminals=float(done),
+                    masks=1.0 - terminated,
+                    next_observations=next_ob,
+                )
+            )
+            ob = next_ob
+
+            if done:
+                expl_metrics = {f'exploration/{k}': np.mean(v) for k, v in flatten(info).items()}
+
+            step += 1
+
+            # Update agent.
+            if FLAGS.balanced_sampling:
+                # Half-and-half sampling from the training dataset and the replay buffer.
+                dataset_batch = train_dataset.sample(config['batch_size'] // 2)
+                replay_batch = replay_buffer.sample(config['batch_size'] // 2)
+                batch = {k: np.concatenate([dataset_batch[k], replay_batch[k]], axis=0) for k in dataset_batch}
+            else:
+                batch = replay_buffer.sample(config['batch_size'])
+
+            if config['agent_name'] == 'rebrac':
+                agent, update_info = agent.update(batch, full_update=(i % config['actor_freq'] == 0))
+            else:
+                agent, update_info = agent.update(batch)
+
+        # Log metrics.
+        if i % FLAGS.log_interval == 0:
+            train_metrics = {f'training/{k}': v for k, v in update_info.items()}
+            if val_dataset is not None:
+                val_batch = val_dataset.sample(config['batch_size'])
+                _, val_info = agent.total_loss(val_batch, grad_params=None)
+                train_metrics.update({f'validation/{k}': v for k, v in val_info.items()})
+            train_metrics['time/epoch_time'] = (time.time() - last_time) / FLAGS.log_interval
+            train_metrics['time/total_time'] = time.time() - first_time
+            train_metrics.update(expl_metrics)
+            last_time = time.time()
+            wandb.log(train_metrics, step=i)
+            train_logger.log(train_metrics, step=i)
+
+        # Evaluate agent.
+        if FLAGS.eval_interval != 0 and (i == 1 or i % FLAGS.eval_interval == 0):
+            renders = []
+            eval_metrics = {}
+            eval_info, trajs, cur_renders = evaluate(
+                agent=agent,
+                env=eval_env,
+                config=config,
+                num_eval_episodes=FLAGS.eval_episodes,
+                num_video_episodes=FLAGS.video_episodes,
+                video_frame_skip=FLAGS.video_frame_skip,
+            )
+            renders.extend(cur_renders)
+            for k, v in eval_info.items():
+                eval_metrics[f'evaluation/{k}'] = v
+
+            success_val = eval_info.get('success')
+            if success_val is not None:
+                try:
+                    eval_success_history.append((i, float(success_val)))
+                except (TypeError, ValueError):
+                    print("Failed to convert success value to float")
+                    print(f"eval_info: {eval_info}")
+                    print(f"success_val: {success_val}")
+                    print(f"i: {i}")
+                    print(f"eval_info.get('success'): {eval_info.get('success')}")
+                    print(f"eval_info.get('success') is not None: {eval_info.get('success') is not None}")
+                    print(f"eval_info.get('success') is not None: {eval_info.get('success') is not None}")
+
+            if FLAGS.video_episodes > 0:
+                video = get_wandb_video(renders=renders)
+                eval_metrics['video'] = video
+
+            wandb.log(eval_metrics, step=i)
+            eval_logger.log(eval_metrics, step=i)
+
+        # Save agent.
+        if FLAGS.save_interval and FLAGS.save_interval > 0 and (i % FLAGS.save_interval == 0):
+            save_agent(agent, FLAGS.save_dir, i)
+
+    if len(eval_success_history) > 0:
+        last_three = [s for _, s in eval_success_history[-3:]]
+        final_success = float(np.mean(last_three))
+        eval_success_history_dicts = [
+            {"step": int(step), "success": float(s)} for step, s in eval_success_history
+        ]
+
+        try:
+            wandb.run.summary['final/success'] = final_success
+            wandb.run.summary['evaluation/success_history'] = eval_success_history_dicts
+        except Exception:
+            print("Failed to add final/success to wandb summary")
+            print(f"final_success: {final_success}")
+            print(f"eval_success_history: {eval_success_history}")
+            print(f"len(eval_success_history): {len(eval_success_history)}")
+            print(f"eval_success_history[-3:]: {eval_success_history[-3:]}")
+            print(f"last_three: {last_three}")
+            print(f"np.mean(last_three): {np.mean(last_three)}")
+            print(f"wandb.run.summary: {wandb.run.summary}")
+        try:
+            last_step = eval_success_history[-1][0]
+            wandb.log({'final/success': final_success}, step=last_step)
+        except Exception:
+            print("Failed to wandb.log final/success")
+
+    train_logger.close()
+    eval_logger.close()
+
+
+if __name__ == '__main__':
+    app.run(main)
