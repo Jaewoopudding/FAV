@@ -1,0 +1,5 @@
+# HPSv2 reward: text-conditioned image-prompt alignment score (maximised).
+name: hpsv2
+negate: false
+# true -> use raw prompt for text features instead of "a photo of a {prompt}".
+hps_use_raw_prompt: false

@@ -1,0 +1,33 @@
+# Flow-GRPO — group-relative PPO on stochastic flow-matching trajectories (iMF-only).
+name: flow_grpo
+forward_mode: velocity
+required_capabilities: [supports_velocity_mode]
+
+num_sde_steps: 4               # Euler-Maruyama steps per rollout
+noise_level: 0.7               # SDE noise scale η
+timestep_fraction: 1.0         # fraction of timesteps trained on (1.0 = all)
+
+k_repeat: 4                    # samples per prompt in one rollout
+global_std: true               # per-prompt mean, batch-global std
+
+inner_epochs: 1
+clip_range: 1.0e-4
+kl_coeff: 0.0                  # KL penalty against reference policy
+adv_clip_max: 5.0
+
+total_batch_size: 256          # rollout total across all GPUs (divisible by k_repeat)
+train_micro_batch_size: 4
+
+optimizer:
+  type: adamw
+  lr: 4.0e-4
+  weight_decay: 0.01
+  betas: [0.9, 0.95]
+scheduler:
+  type: constant
+  warmup_steps: 0
+max_grad_norm: 2.0
+
+num_steps: 500                 # rollout + PPO inner-loop iterations
+labels: [207, 22, 291, 387, 985, 483, 562, 649, 0, 9, 39, 55, 69, 80, 105, 108,
+         115, 130, 398, 403, 404, 409, 414, 497, 540, 547, 550, 561, 620, 650, 671, 732]

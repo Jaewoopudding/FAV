@@ -1,0 +1,38 @@
+# @package _global_
+# StyleGAN-XL × FAV × aesthetic.
+defaults:
+  - override /backbone: stylegan_xl
+  - override /algorithm: fav
+  - override /reward: aesthetic
+
+run_name: stylegan_xl_fav_aesthetic
+seed: 0
+
+backbone:
+  sample:
+    truncation_psi: 0.7
+  lora:
+    rank: 32
+    alpha: 32
+
+algorithm:
+  num_steps: 200
+  classes_per_step: 8
+  effective_batch_size: 256
+  beta: 10.0
+  temp_kde: [0.3]
+  temp_stein: [0.3]
+  optimizer:
+    lr: 5.0e-4
+  scheduler:
+    warmup_steps: 0
+  max_grad_norm: 2.0
+  gradient_estimator:
+    enabled: false                 # JPEG/NES path not supported (no VAE)
+
+runtime:
+  micro_batch_size: 4
+  eval_batch_size: 32
+  gen_bsz: 32
+
+eval_interval: 20

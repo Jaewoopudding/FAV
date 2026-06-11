@@ -1,0 +1,20 @@
+# iMeanFlow (PyTorch).
+name: imf
+ckpt_path: assets/iMF-XL-2.pth
+model_str: MiT_XL_2
+img_size: 32                  # latent resolution (256/8)
+img_channels: 4
+num_classes: 1000
+dtype: float32
+
+sample:
+  num_steps: 1                  # experiment overlays override
+  cfg_omega: 8.0                # classifier-free-guidance scale
+  interval_min: 0.4             # CFG guidance interval lower bound
+  interval_max: 0.65            # CFG guidance interval upper bound
+
+lora:
+  rank: 4
+  alpha: null                 # default: 2 * rank
+  dropout: 0.0
+  target_modules: null        # default: attention QKV+out

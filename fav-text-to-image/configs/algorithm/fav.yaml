@@ -1,0 +1,17 @@
+# FAV: feature-space amortized variational alignment (SVGD).
+name: fav
+
+beta: 1.0
+temp_kde: [0.5]
+temp_stein: [0.5]
+
+lr: 5.0e-4
+warmup_steps: 0
+max_grad_norm: 2.0
+
+# Counts both positive (gen) and negative (ref) particles over all prompts:
+# effective_batch_size = 2 * prompts_per_step * gen_per_prompt.
+prompts_per_step: 4
+effective_batch_size: 64
+
+num_steps: 1000

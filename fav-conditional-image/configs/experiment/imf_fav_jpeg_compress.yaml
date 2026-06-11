@@ -1,0 +1,41 @@
+# @package _global_
+# iMF × FAV × jpeg_compressibility (NES gradient estimator).
+defaults:
+  - override /backbone: imf
+  - override /algorithm: fav
+  - override /reward: jpeg_compress
+
+run_name: imf_fav_jpeg_compress
+seed: 0
+
+backbone:
+  sample:
+    num_steps: 4
+  lora:
+    rank: 16
+    alpha: 64
+
+algorithm:
+  num_steps: 40
+  classes_per_step: 8
+  effective_batch_size: 256
+  beta: 0.01
+  temp_kde: [0.3]
+  temp_stein: [0.3]
+  optimizer:
+    lr: 5.0e-4
+  scheduler:
+    warmup_steps: 0
+  max_grad_norm: 2.0
+  gradient_estimator:
+    enabled: true
+    num_samples: 16
+    sigma: 0.005
+    chunk_size: 1
+
+runtime:
+  micro_batch_size: 4
+  eval_batch_size: 32
+  gen_bsz: 32
+
+eval_interval: 10

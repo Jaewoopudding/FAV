@@ -1,0 +1,5 @@
+# JPEG compressibility — non-differentiable; requires NES gradient estimator.
+name: jpeg_compress
+quality: 95
+mode: compress                # compress (reward = -size) | incompress (reward = +size)
+requires_gradient_estimator: true

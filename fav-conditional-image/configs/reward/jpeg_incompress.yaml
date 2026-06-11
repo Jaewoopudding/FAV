@@ -1,0 +1,5 @@
+# JPEG incompressibility — non-differentiable; requires NES gradient estimator.
+name: jpeg_incompress
+quality: 95
+mode: incompress
+requires_gradient_estimator: true

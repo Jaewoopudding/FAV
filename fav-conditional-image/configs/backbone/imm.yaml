@@ -1,0 +1,21 @@
+# IMM (PyTorch).
+name: imm
+ckpt_path: assets/imm-im256.pkl
+config_name: im256_generate_images.yaml
+temb_type: identity
+img_resolution: 32            # latent resolution
+img_channels: 4
+num_classes: 1000
+label_dim: 1000
+dtype: float32
+
+# IMM has no guidance interval.
+sample:
+  num_steps: 1
+  cfg_omega: 8.0                # CFG strength
+
+lora:
+  rank: 4
+  alpha: null
+  dropout: 0.0
+  target_modules: null        # default: ["qkv", "proj", "fc1", "fc2"]

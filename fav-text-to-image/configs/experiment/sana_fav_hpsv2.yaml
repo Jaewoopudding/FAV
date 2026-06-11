@@ -1,0 +1,36 @@
+# @package _global_
+# Sana-Sprint 1.6B x FAV x HPSv2.
+defaults:
+  - override /backbone: sana_sprint_hf
+  - override /algorithm: fav
+  - override /reward: hpsv2
+
+run_name: sana_fav_hpsv2
+seed: 0
+
+backbone:
+  model_repo: Efficient-Large-Model/Sana_Sprint_1.6B_1024px_diffusers
+  sample:
+    sample_steps: 4
+    intermediate_timesteps: null   # required when sample_steps != 2
+  lora:
+    rank: 32
+    alpha: 32.0
+
+algorithm:
+  num_steps: 200
+  prompts_per_step: 8
+  effective_batch_size: 256
+  beta: 100
+  temp_kde: [0.3]
+  temp_stein: [0.3]
+  lr: 5.0e-4
+  warmup_steps: 0
+  max_grad_norm: 1.0
+
+runtime:
+  micro_batch_size: 1
+  eval_batch_size: 32
+
+eval_interval: 20
+save_interval: 20

@@ -1,0 +1,38 @@
+# @package _global_
+# IMM × FAV × aesthetic.
+defaults:
+  - override /backbone: imm
+  - override /algorithm: fav
+  - override /reward: aesthetic
+
+run_name: imm_fav_aesthetic
+seed: 0
+
+backbone:
+  sample:
+    num_steps: 4
+  lora:
+    rank: 16
+    alpha: 64
+
+algorithm:
+  num_steps: 200
+  classes_per_step: 8
+  effective_batch_size: 256
+  beta: 0.5
+  temp_kde: [0.3]
+  temp_stein: [0.3]
+  optimizer:
+    lr: 5.0e-4
+  scheduler:
+    warmup_steps: 0
+  max_grad_norm: 2.0
+  gradient_estimator:
+    enabled: false
+
+runtime:
+  micro_batch_size: 4
+  eval_batch_size: 32
+  gen_bsz: 32
+
+eval_interval: 20

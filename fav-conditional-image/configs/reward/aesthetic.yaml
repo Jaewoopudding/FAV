@@ -1,0 +1,5 @@
+# LAION aesthetic predictor (CLIP ViT-L/14 + MLP); differentiable.
+name: aesthetic
+mlp_ckpt: assets/sac+logos+ava1-l14-linearMSE.pth
+clip_model: openai/clip-vit-large-patch14
+dtype: float32

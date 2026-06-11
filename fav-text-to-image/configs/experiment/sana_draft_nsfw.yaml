@@ -1,0 +1,33 @@
+# @package _global_
+# Sana-Sprint × FAV × NSFW (minimise NSFW probability; reward negated).
+defaults:
+  - override /backbone: sana_sprint_hf
+  - override /algorithm: fav
+  - override /reward: nsfw
+
+run_name: sana_fav_nsfw
+seed: 0
+
+backbone:
+  model_repo: Efficient-Large-Model/Sana_Sprint_1.6B_1024px_diffusers
+  sample:
+    sample_steps: 4
+    intermediate_timesteps: null   # required when sample_steps != 2
+  lora:
+    rank: 8
+    alpha: 8.0
+
+algorithm:
+  num_steps: 100
+  total_batch_size: 256
+  reward_multiplier: 5.0e-5
+  lr: 5.0e-4
+  warmup_steps: 0
+  max_grad_norm: 2.0
+
+runtime:
+  micro_batch_size: 1
+  eval_batch_size: 4
+
+eval_interval: 10
+save_interval: 100

@@ -41,6 +41,8 @@ text-to-image synthesis.
 |------|-----------|
 | **Reinforcement Learning** (offline & offline-to-online) | [`fav-offrl/`](fav-offrl/) |
 | **2D Toy Setting**  | [`fav-toy/`](fav-toy/) |
+| **Conditional Image Generation** | [`fav-conditional-image/`](fav-conditional-image/) |
+| **Text-to-Image** | [`fav-text-to-image/`](fav-text-to-image/) |
 
 
 ## Citation
@@ -50,7 +52,7 @@ If you find this repository helpful, please cite our work:
 ```bibtex
 @article{lee2026aligning,
   title={Aligning Few-Step Generative Models by Amortizing Sample-based Variational Inference},
-  author={Lee, Jaewoo and Kang, Hyeongyu and Kim, Dohyun and Sim, Kyuil and Shin, Woocheol and Kim, Minsu and Yun, Taeyoung and Lee, Jeongjae and Choi, Sanghyeok and Lee, Tabitha Edith and Ye, Jongchul and Park, Jinkyoo},
+  author={Lee, Jaewoo and Kang, Hyeongyu and Kim, Dohyun and Sim, Kyuil and Shin, Woocheol and Kim, Minsu and Yun, Taeyoung and Lee, Jeongjae and Choi, Sanghyeok and Lee, Tabitha Edith and Ye, Jong Chul and Park, Jinkyoo},
   journal={arXiv preprint arXiv:2605.26552},
   year={2026}
 }

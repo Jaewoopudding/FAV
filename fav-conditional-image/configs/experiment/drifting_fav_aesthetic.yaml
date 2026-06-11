@@ -1,0 +1,38 @@
+# @package _global_
+# Drifting (JAX) × FAV × aesthetic. Invoke via scripts.train_drifting.
+defaults:
+  - override /backbone: drifting
+  - override /algorithm: fav
+  - override /reward: aesthetic
+
+run_name: drifting_fav_aesthetic
+seed: 0
+
+backbone:
+  init_from: hf://latent_L_sota
+  img_resolution: 256
+  sample:
+    cfg_omega: 1.0
+  lora:
+    rank: 32
+    alpha: 128
+
+algorithm:
+  num_steps: 200
+  classes_per_step: 8
+  effective_batch_size: 256
+  beta: 1.0
+  temp_kde: [0.3]
+  temp_stein: [0.3]
+  optimizer:
+    lr: 5.0e-4
+  scheduler:
+    warmup_steps: 0
+  max_grad_norm: 2.0
+
+runtime:
+  micro_batch_size: 8
+  eval_batch_size: 32
+  gen_bsz: 32
+
+eval_interval: 20

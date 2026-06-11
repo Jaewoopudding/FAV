@@ -1,0 +1,32 @@
+# @package _global_
+# iMF × Adjoint Matching × aesthetic.
+defaults:
+  - override /backbone: imf
+  - override /algorithm: adjoint_matching
+  - override /reward: aesthetic
+
+run_name: imf_adjoint_matching_aesthetic
+seed: 0
+
+backbone:
+  lora:
+    rank: 16
+    alpha: 64
+
+algorithm:
+  num_steps: 200
+  num_adjoint_steps: 4
+  lambda_am: 1000.0
+  lct_constant: 1.6
+  optimizer:
+    lr: 5.0e-4
+  scheduler:
+    warmup_steps: 0
+  max_grad_norm: 2.0
+
+runtime:
+  micro_batch_size: 8
+  eval_batch_size: 16
+  gen_bsz: 16
+
+eval_interval: 20

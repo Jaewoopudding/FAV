@@ -1,0 +1,17 @@
+# StyleGAN-XL (PyTorch) — one-shot generator, no CFG.
+name: stylegan_xl
+ckpt_path: assets/stylegan_xl_imagenet256.pkl
+img_resolution: 256
+img_channels: 3                # pixel space (RGB)
+label_dim: 1000
+num_classes: 1000
+dtype: float32
+
+sample:
+  truncation_psi: 1.0           # truncation-trick strength (not CFG)
+
+lora:
+  rank: 4
+  alpha: null
+  dropout: 0.0
+  target_modules: null         # ignored — LoRA always injected into FullyConnectedLayer only

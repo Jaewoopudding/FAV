@@ -1,0 +1,32 @@
+# @package _global_
+# IMM × DRaFT × aesthetic.
+defaults:
+  - override /backbone: imm
+  - override /algorithm: draft
+  - override /reward: aesthetic
+
+run_name: imm_draft_aesthetic
+seed: 0
+
+backbone:
+  sample:
+    num_steps: 4
+  lora:
+    rank: 16
+    alpha: 64
+
+algorithm:
+  num_steps: 200
+  reward_multiplier: 5.0e-6
+  optimizer:
+    lr: 5.0e-4
+  scheduler:
+    warmup_steps: 0
+  max_grad_norm: 2.0
+
+runtime:
+  micro_batch_size: 8
+  eval_batch_size: 32
+  gen_bsz: 32
+
+eval_interval: 10

@@ -1,0 +1,27 @@
+# Sana-Sprint backbone (HuggingFace diffusers; requires diffusers >= 0.32).
+name: sana_sprint_hf
+
+model_repo: Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers
+
+image_size: 1024
+weight_dtype: bfloat16
+vae_dtype: float32               # fp32 VAE decode for stable gradients
+use_grad_checkpoint: true
+
+max_sequence_length: 300
+complex_human_instruction: null  # null -> diffusers pipeline default chi-prompt
+
+sample:
+  sample_steps: 2
+  max_timesteps: 1.57080
+  # intermediate_timesteps must be null when sample_steps != 2.
+  intermediate_timesteps: 1.3
+  cfg_scale: 4.5
+  grad_checkpoint_sampling: false
+
+# LoRA on SanaTransformer2DModel attention projections (attn1 self + attn2 cross).
+lora:
+  rank: 16
+  alpha: 16.0
+  dropout: 0.0
+  target_modules: [to_q, to_k, to_v, to_out.0]

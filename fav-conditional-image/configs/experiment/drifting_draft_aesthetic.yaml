@@ -1,0 +1,34 @@
+# @package _global_
+# Drifting (JAX) × DRaFT × aesthetic.
+defaults:
+  - override /backbone: drifting
+  - override /algorithm: draft
+  - override /reward: aesthetic
+
+run_name: drifting_draft_aesthetic
+seed: 0
+
+backbone:
+  init_from: hf://latent_L_sota
+  img_resolution: 256
+  sample:
+    cfg_omega: 1.0
+  lora:
+    rank: 16
+    alpha: 64
+
+algorithm:
+  num_steps: 200
+  reward_multiplier: 5.0e-5
+  optimizer:
+    lr: 5.0e-4
+  scheduler:
+    warmup_steps: 0
+  max_grad_norm: 2.0
+
+runtime:
+  micro_batch_size: 8
+  eval_batch_size: 32
+  gen_bsz: 32
+
+eval_interval: 20

@@ -1,0 +1,24 @@
+# Adjoint Matching — adjoint-ODE-based reward gradient (iMF-only).
+name: adjoint_matching
+forward_mode: velocity
+required_capabilities: [supports_velocity_mode]
+
+lambda_am: 1.0                 # reward scaling λ on g(x) = -λ · r(decode(x))
+lct_constant: 1.6              # loss clipping constant: lct = lct_constant · λ²
+num_adjoint_steps: 4
+
+total_batch_size: 256          # summed across all GPUs; grad_accum derived at runtime
+
+optimizer:
+  type: adamw
+  lr: 4.0e-4
+  weight_decay: 0.01
+  betas: [0.9, 0.95]
+scheduler:
+  type: constant
+  warmup_steps: 0
+max_grad_norm: 2.0
+
+num_steps: 1000
+labels: [207, 22, 291, 387, 985, 483, 562, 649, 0, 9, 39, 55, 69, 80, 105, 108,
+         115, 130, 398, 403, 404, 409, 414, 497, 540, 547, 550, 561, 620, 650, 671, 732]

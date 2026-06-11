@@ -1,0 +1,3 @@
+# Falconsai NSFW classifier reward. Negated -> training minimises NSFW prob.
+name: nsfw
+negate: true

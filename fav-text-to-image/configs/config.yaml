@@ -1,0 +1,33 @@
+# Top-level Hydra config: composes backbone + algorithm + reward.
+defaults:
+  - backbone: sana_sprint_hf
+  - algorithm: fav
+  - reward: hpsv2
+  - _self_
+
+workdir: runs
+run_name: null            # auto-generated if null
+seed: 0
+
+train_prompt_file: assets/prompts/DrawBench_train.txt
+eval_prompt_file: assets/prompts/DrawBench_eval.txt
+
+eval_interval: 10
+save_interval: 100
+log_interval: 1
+
+resume_from: null
+
+runtime:
+  micro_batch_size: 1
+  eval_batch_size: 4
+  grad_accum_steps: 1     # placeholder; auto-computed per algorithm at runtime
+  mixed_precision: null   # null -> use backbone weight_dtype
+
+wandb:
+  enabled: true
+  project: fav-text-to-image
+
+hydra:
+  job:
+    chdir: false

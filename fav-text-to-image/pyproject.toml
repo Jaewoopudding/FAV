@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fav-text-to-image"
+version = "0.1.0"
+description = "FAV / DRaFT alignment for text-to-image diffusion (Sana-Sprint)."
+readme = "README.md"
+requires-python = ">=3.10"
+
+# Sana-Sprint loads entirely from HuggingFace via diffusers (transformer + VAE +
+# Gemma text encoder + SCM scheduler) — no NVlabs Sana package or SANA_ROOT needed.
+# Requires diffusers >= 0.32 for SCM / Sana-Sprint support.
+dependencies = [
+    "torch>=2.4",
+    "diffusers>=0.32",
+    "accelerate",
+    "peft",
+    "hydra-core>=1.3",
+    "omegaconf",
+    "wandb",
+    "numpy",
+    "Pillow",
+    "tqdm",
+    "torchvision",
+    # reward backends
+    "hpsv2",             # HPSv2 (xswu/HPSv2)
+    "transformers",      # Falconsai NSFW ViT
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["main*"]

@@ -1,0 +1,39 @@
+# @package _global_
+# iMF × Flow-GRPO × jpeg_compressibility.
+defaults:
+  - override /backbone: imf
+  - override /algorithm: flow_grpo
+  - override /reward: jpeg_compress
+
+run_name: imf_flow_grpo_jpeg_compress
+seed: 0
+
+backbone:
+  lora:
+    rank: 16
+    alpha: 64
+
+algorithm:
+  num_steps: 200
+  num_sde_steps: 4
+  noise_level: 0.1
+  k_repeat: 32
+  global_std: true
+  inner_epochs: 1
+  clip_range: 0.01
+  kl_coeff: 0.0005
+  total_batch_size: 256
+  train_micro_batch_size: 8
+  optimizer:
+    lr: 5.0e-4
+  scheduler:
+    warmup_steps: 0
+  max_grad_norm: 2.0
+
+runtime:
+  micro_batch_size: 8
+  grad_accum_steps: 1
+  eval_batch_size: 32
+  gen_bsz: 32
+
+eval_interval: 20

@@ -1,0 +1,32 @@
+# FAV — Feature-space Amortized Variational alignment.
+name: fav
+forward_mode: sample
+required_capabilities: []     # works on all 4 backbones
+
+beta: 1.0                     # reward scaling in Stein-VGD target
+temp_kde: [0.5]               # multi-scale KDE prior temperatures (single value or list)
+temp_stein: [0.5]             # multi-scale Stein kernel temperatures
+
+optimizer:
+  type: adamw
+  lr: 4.0e-4
+  weight_decay: 0.01
+  betas: [0.9, 0.95]
+scheduler:
+  type: constant              # constant | cosine
+  warmup_steps: 500
+max_grad_norm: 2.0
+
+classes_per_step: 8
+# Counts gen + ref particles over all classes: 2 * classes_per_step * gen_per_class.
+effective_batch_size: 256
+num_steps: 1000
+labels: [207, 22, 291, 387, 985, 483, 562, 649, 0, 9, 39, 55, 69, 80, 105, 108,
+         115, 130, 398, 403, 404, 409, 414, 497, 540, 547, 550, 561, 620, 650, 671, 732]
+
+# Zeroth-order (NES) estimator — required for non-differentiable rewards.
+gradient_estimator:
+  enabled: false
+  num_samples: 16
+  sigma: 0.01
+  chunk_size: 1               # perturbations per reward call

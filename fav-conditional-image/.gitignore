@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Environments
+.venv/
+venv/
+env/
+
+# Experiment outputs
+runs/
+wandb/
+outputs/
+logs/
+
+# Local assets / checkpoints (download via README instructions)
+assets/*.pth
+assets/*.pkl
+assets/*.safetensors
+assets/drifting_*/
+!assets/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Paper PDF (large binary)
+*.pdf
+
+# Generated eval artifacts
+log/
